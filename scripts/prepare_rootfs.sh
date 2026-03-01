@@ -16,9 +16,13 @@ MIRROR=${MIRROR:-http://deb.debian.org/debian}
 
 mkdir -p "$ROOTFS_DIR"
 
-if command -v qemu-debootstrap >/dev/null 2>&1; then
-  echo "Using qemu-debootstrap to build Debian $DEBIAN_DIST ($ARCH) at $ROOTFS_DIR from mirror $MIRROR"
+# Prefer running qemu-debootstrap via sudo if available (may be installed for root only)
+if sudo qemu-debootstrap --help >/dev/null 2>&1; then
+  echo "Using sudo qemu-debootstrap to build Debian $DEBIAN_DIST ($ARCH) at $ROOTFS_DIR from mirror $MIRROR"
   sudo qemu-debootstrap --arch="$ARCH" --variant=minbase "$DEBIAN_DIST" "$ROOTFS_DIR" "$MIRROR"
+elif command -v qemu-debootstrap >/dev/null 2>&1; then
+  echo "Using qemu-debootstrap (user) to build Debian $DEBIAN_DIST ($ARCH) at $ROOTFS_DIR from mirror $MIRROR"
+  qemu-debootstrap --arch="$ARCH" --variant=minbase "$DEBIAN_DIST" "$ROOTFS_DIR" "$MIRROR"
 else
   echo "qemu-debootstrap not found; falling back to debootstrap + qemu-user-static"
   sudo apt-get update
