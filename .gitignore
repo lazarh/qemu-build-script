@@ -1,0 +1,6 @@
+# Ignore build outputs and large artifacts
+sources/output/
+sdcard.img
+qemu-rootfs/
+*.img
+*.iso
