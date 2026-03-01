@@ -34,8 +34,9 @@ mount "${LOOP}p2" /mnt/sdroot
 rsync -a --numeric-ids "$ROOTFS_DIR/" /mnt/sdroot/
 mount "${LOOP}p1" /mnt/sdboot
 mkdir -p /mnt/sdboot/boot
-cp -a "$ZIMAGE" /mnt/sdboot/
-cp -a "$DTB" /mnt/sdboot/ 2>/dev/null || true
+# Copy kernel and DTB without preserving ownership (FAT doesn't support Unix ownership)
+cp --no-preserve=ownership "$ZIMAGE" /mnt/sdboot/ || cp -a "$ZIMAGE" /mnt/sdboot/
+cp --no-preserve=ownership "$DTB" /mnt/sdboot/ 2>/dev/null || cp -a "$DTB" /mnt/sdboot/ 2>/dev/null || true
 
 # Install U-Boot binary at offset so QEMU can use it when booting from -sd
 if [ -f "$UBOOT_BIN" ]; then
