@@ -2,20 +2,28 @@
 set -euo pipefail
 
 # Usage: ./scripts/prepare_rootfs.sh [rootfs-dir]
-ROOTFS_DIR=${1:-$HOME/qemu-rootfs/rootfs-armhf}
+# Environment variables:
+#  DEBIAN_DIST (default: bookworm)
+#  ARCH (default: armhf)
+#  MIRROR (default: http://deb.debian.org/debian)
+# Defaults to the repository root (./rootfs-armhf) when no argument is provided.
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOTFS_DIR=${1:-"$REPO_ROOT/rootfs-armhf"}
 DEBIAN_DIST=${DEBIAN_DIST:-bookworm}
 ARCH=${ARCH:-armhf}
+MIRROR=${MIRROR:-http://deb.debian.org/debian}
 
 mkdir -p "$ROOTFS_DIR"
 
 if command -v qemu-debootstrap >/dev/null 2>&1; then
-  echo "Using qemu-debootstrap to build Debian $DEBIAN_DIST ($ARCH) at $ROOTFS_DIR"
-  sudo qemu-debootstrap --arch="$ARCH" --variant=minbase "$DEBIAN_DIST" "$ROOTFS_DIR" http://deb.debian.org/debian
+  echo "Using qemu-debootstrap to build Debian $DEBIAN_DIST ($ARCH) at $ROOTFS_DIR from mirror $MIRROR"
+  sudo qemu-debootstrap --arch="$ARCH" --variant=minbase "$DEBIAN_DIST" "$ROOTFS_DIR" "$MIRROR"
 else
   echo "qemu-debootstrap not found; falling back to debootstrap + qemu-user-static"
   sudo apt-get update
   sudo apt-get install -y debootstrap qemu-user-static
-  sudo debootstrap --arch="$ARCH" --foreign "$DEBIAN_DIST" "$ROOTFS_DIR" http://deb.debian.org/debian
+  sudo debootstrap --arch="$ARCH" --foreign "$DEBIAN_DIST" "$ROOTFS_DIR" "$MIRROR"
   sudo cp /usr/bin/qemu-arm-static "$ROOTFS_DIR/usr/bin/"
   sudo chroot "$ROOTFS_DIR" /usr/bin/qemu-arm-static /bin/sh -c "/debootstrap/debootstrap --second-stage"
 fi
