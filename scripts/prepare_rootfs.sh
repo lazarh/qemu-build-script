@@ -32,10 +32,51 @@ sudo chroot "$ROOTFS_DIR" /usr/bin/qemu-arm-static /bin/sh -c "/debootstrap/debo
 sudo chroot "$ROOTFS_DIR" /usr/bin/qemu-arm-static /bin/bash -c "
   echo 'deb $MIRROR $DEBIAN_DIST main contrib non-free' > /etc/apt/sources.list
   apt-get update
-  apt-get install -y --no-install-recommends ssh locales ca-certificates sudo
+
+  # Init system + essential runtime packages
+  apt-get install -y --no-install-recommends \
+    systemd systemd-sysv dbus \
+    udev \
+    util-linux procps kmod login bash \
+    iproute2 iputils-ping ifupdown \
+    openssh-server locales ca-certificates sudo \
+    nano
+
+  # Hostname and /etc/hosts
+  echo 'debian-armhf' > /etc/hostname
+  printf '127.0.0.1\tlocalhost\n127.0.1.1\tdebian-armhf\n' >> /etc/hosts
+
+  # fstab
+  cat > /etc/fstab <<'FSTAB'
+/dev/mmcblk0p2  /      ext4  defaults  0 1
+/dev/mmcblk0p1  /boot  vfat  defaults  0 2
+proc            /proc  proc  defaults  0 0
+sysfs           /sys   sysfs defaults  0 0
+FSTAB
+
+  # Network: DHCP on eth0
+  cat > /etc/network/interfaces <<'NET'
+auto lo
+iface lo inet loopback
+auto eth0
+iface eth0 inet dhcp
+NET
+
+  # Serial console login on ttyAMA0 (vexpress UART)
+  systemctl enable serial-getty@ttyAMA0.service
+
+  # Generate machine-id (required by systemd)
+  systemd-machine-id-setup 2>/dev/null || true
+
+  # Accounts
+  echo 'root:root' | chpasswd
   useradd -m -s /bin/bash user || true
   echo 'user:password' | chpasswd
   adduser user sudo || true
+
+  # Locale
+  echo 'LANG=en_US.UTF-8' > /etc/default/locale
+  locale-gen en_US.UTF-8 || true
 "
 
 echo "Rootfs prepared at $ROOTFS_DIR"
