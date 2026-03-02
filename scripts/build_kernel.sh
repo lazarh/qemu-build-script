@@ -12,6 +12,9 @@ if [ ! -d "$LINUX_DIR" ]; then
   exit 1
 fi
 
+# Resolve before pushd changes the working directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 pushd "$LINUX_DIR" >/dev/null
 export ARCH="$ARCH"
 export CROSS_COMPILE="$CROSS_COMPILE"
@@ -21,7 +24,6 @@ make vexpress_defconfig
 
 # Apply config options from any *.config fragments in the scripts/ directory.
 # Each fragment is a plain list of CONFIG_FOO=y / CONFIG_FOO=m lines (comments ok).
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRAGMENTS=()
 for fragment in "$SCRIPT_DIR"/*.config; do
   [ -f "$fragment" ] || continue
