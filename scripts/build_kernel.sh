@@ -19,14 +19,25 @@ export CROSS_COMPILE="$CROSS_COMPILE"
 echo "Configuring kernel for vexpress"
 make vexpress_defconfig
 
-# Apply optional config fragments (e.g. docker.config)
+# Apply config options from any *.config fragments in the scripts/ directory.
+# Each fragment is a plain list of CONFIG_FOO=y / CONFIG_FOO=m lines (comments ok).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for fragment in "$SCRIPT_DIR"/*.config; do
   [ -f "$fragment" ] || continue
   echo "Applying config fragment: $fragment"
-  ./scripts/kconfig/merge_config.sh -m .config "$fragment"
-  make olddefconfig
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    case "$val" in
+      y) ./scripts/config --enable  "${key#CONFIG_}" ;;
+      m) ./scripts/config --module  "${key#CONFIG_}" ;;
+      n) ./scripts/config --disable "${key#CONFIG_}" ;;
+      *) ./scripts/config --set-val "${key#CONFIG_}" "$val" ;;
+    esac
+  done < "$fragment"
 done
+make olddefconfig
 
 echo "Building kernel zImage and DTBs (jobs=$NPROC)"
 make -j"$NPROC" zImage dtbs
