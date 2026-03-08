@@ -80,13 +80,15 @@ Booting in QEMU
     -drive file=sdcard.img,if=sd,format=raw \
     -nographic \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-    -net nic,netdev=net0
+    -net nic,model=lan9118,netdev=net0 2>/dev/null
 
   Inside the VM, bring up the network manually if ifupdown did not auto-configure:
 
     ip link set eth0 up
     ip addr add 10.0.2.15/24 dev eth0
     ip route add default via 10.0.2.2
+  
+    echo "nameserver 1.1.1.1" >> /etc/resolv.conf
 
   Then SSH in from the host: ssh -p 2222 root@localhost
 
